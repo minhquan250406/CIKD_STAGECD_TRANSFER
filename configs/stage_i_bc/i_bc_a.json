@@ -1,0 +1,16 @@
+{
+    "config_name": "I-BC-A",
+    "alpha_max": 0.5,
+    "tau_logit_adjust": 0.5,
+    "binary_loss_weight": 0.25,
+    "ck_real_loss_weight": 0.35,
+    "kl_anchor_weight": 0.05,
+    "residual_reg_weight": 0.01,
+    "epochs": 20,
+    "batch_size": 64,
+    "lr": 0.0001,
+    "weight_decay": 0.01,
+    "patience": 5,
+    "dropout": 0.2,
+    "seed": 42
+}

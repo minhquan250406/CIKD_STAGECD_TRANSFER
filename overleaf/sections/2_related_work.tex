@@ -1,0 +1,50 @@
+\section{Related Work}
+
+\subsection{Multimodal Misinformation Detection}
+The rapid evolution of social media platforms has profoundly altered the landscape of deceptive content mining, shifting the research focus from traditional plain text analysis to multimodal misinformation detection \cite{ref11}. Early methodologies in this subfield primarily relied on late fusion techniques or early concatenation directly between text and image feature representations. With the explosion of deep representation learning models, modern structural frameworks have shifted to unified neural backbones to simultaneously encode both structural and semantic properties across heterogeneous data streams \cite{ref12, ref8}.
+
+To systematically process these isolated inputs, standard architectures typically deploy joint attention-based systems to capture cross-modal correlations \cite{ref13}. Although binary classification setups (e.g., merely separating general fake news from mainstream content) laid the foundational groundwork for this field, they inherently suffer from coarse-grained abstraction penalties.
+
+Therefore, recent academic shifts emphasize the urgency of fine-grained misinformation modeling \cite{ref14}. This classification schema is a prerequisite to isolate each individual deceptive dynamic, such as semantic manipulations confined strictly to text, deep-faked visual elements, or structural deviations from objective factual reference planes.
+
+\subsection{Knowledge-Aware Misinformation Detection}
+To overcome the limitations of perception-only architectures, integrating structured Knowledge Graphs (KGs) has become a focal research paradigm \cite{ref15, ref16, ref17}. This method maps multimodal tokens to unified entity networks (Wikidata, Wikipedia) to verify real-world factual claims \cite{ref18}. Through the entity linking mechanism, the system extracts external relational implications and background knowledge triples to fortify the text and visual embedding spaces.
+
+Pioneering studies often use graph embedding algorithms (TransE) or Graph Neural Networks (GNNs, GAT) to propagate relational signals across textual items and background entities \cite{ref19, ref20, ref21}. Here, specialized attention channels are configured to compute dynamic weights for neighbor selections from the graph, ensuring optimal integration of relevant contexts and noise filtering.
+
+However, traditional knowledge-enhanced models (such as KEAN, KGAlign, KAMP) all encounter a methodological bottleneck: passive KG fusion \cite{ref5}. They blend external triplet properties from the KG into a generalized multimodal feature pool via global cross-attention or concatenation. This process dilutes factual deception indicators and the directional properties of structural knowledge, failing to isolate targeted friction components between visual patches and the semantic relations of the graph. Consequently, the system achieves suboptimal performance when isolating the content-knowledge inconsistency subset (Class 2: CK) under rigorous locked-test protocols.
+
+\subsection{Cross-Modal Inconsistency and Ambiguity Detection}
+Cross-modal inconsistency detection frameworks often optimize directly for identifying points of divergence, where language tokens contradict or directly clash with the factual scene depicted in associated image patches. To address this structural vulnerability, co-attention networks are widely deployed to simultaneously map image bounding regions and textual phrases into a common interaction space, helping to isolate local anomalies \cite{ref14}. Advanced setups often apply contrastive learning objectives to widen the divergence threshold, assigning a high loss penalty to entities leaking misinformation \cite{ref22, ref23}.
+
+However, current cross-modal inconsistency detection systems rely on an implicit assumption: the reference reality is entirely self-contained within that local text-image pair. They solely focus on measuring surface compatibility between text and image \cite{ref24, ref25, ref26}. Consequently, these models are completely powerless against sophisticated fabrications: the correlation between text and image achieves absolute surface consistency (Class 1 remains undetected), but their overall logical essence violates the objective knowledge of the external world (Class 2: CK). Lacking an external truth reference plane, merely optimizing internal similarity metrics significantly degrades the model's generalization capability on complex real-world datasets.
+
+\subsection{Foundation Models and Base Feature Representation Learning}
+The bounded performance of complex multimodal classification systems is tightly constrained by the geometric structure of the neural networks acting as feature extraction backbones. Modern deep learning optimization pipelines heavily rely on pre-trained large language models and vision-language foundation models to compute context-aware embeddings \cite{ref27}.
+
+For the language feature space, improved variants of Masked Language Models like BERT or RoBERTa serve as the normative configuration due to their dynamic multi-layer bidirectional encoding characteristics \cite{ref6, ref7}. This mechanism allows the system to capture detached contexts from both the left and right sides of a token in a sentence, optimizing semantic representation for short and fragmented social media posts.
+
+Humans communicate via text, but sophisticated fake news often manipulates image patches to deceive visually. Therefore, computer vision sub-modules have shifted aggressively from traditional Convolutional Neural Networks (CNNs) to Vision-Language Transformers \cite{ref28, ref9}.
+
+For instance, the CLIP architecture leverages large-scale contrastive learning objectives to globally align semantic scenes or extract high-resolution sequences of local visual patches ($V_{patch}$) \cite{ref28, ref9}. By processing images as sequences of operands akin to text, vision Transformers allow downstream models to directly compute cross-attention maps between structured knowledge entities and specific visual regions.
+
+Additionally, inheriting additive residual connections remains a standard paradigm in deep network operations. The Residual Learning principle from the classic ResNet structure stabilizes gradient propagation, preventing the vanishing gradient phenomenon as neural networks progressively increase in depth \cite{ref8}.
+
+In modern multimodal optimization tasks, this mechanism is extremely critical: it permits the integration of corrective pathways in the form of $\text{logits}_{\text{base}} + \alpha \cdot \text{logits}_{\text{delta}}$ to directly refine fixed, pre-frozen multimodal anchors, thereby preserving generalization features without disrupting the base representation space \cite{ref29}.
+
+\subsection{Reliability, Calibration, and Statistical Pitfalls in Model Evaluation}
+Evaluating deep classification models poses stringent challenges regarding empirical calibration and statistical pitfalls under skewed distributions. Deep neural networks often suffer from overconfidence in erroneous argmax predictions \cite{ref10}. To quantify this risk, metrics such as Expected Calibration Error (ECE), Negative Log-Likelihood, and Brier Score are established to measure the divergence between predicted confidence and actual accuracy frequencies \cite{ref10, ref30, ref31}.
+
+To lower the ECE metric without shifting argmax classification boundaries, the post-hoc temperature scaling calibration algorithm is deployed to reconstruct the global logit distribution via a single parameter T > 0 \cite{ref10}:
+\begin{equation}
+\hat{p}_i = \max_k \sigma \left( \frac{z_i}{T} \right)_k
+\end{equation}
+
+Alongside calibration, benchmark design demands rigorous protocols to avoid statistical pitfalls. When evaluating the minority knowledge inconsistency class (Class 2: CK) on imbalanced datasets, relying on the global Accuracy score causes severe bias. Therefore, adhering to evaluation principles based on Macro-F1 and class-specific F1 scores (F1class) is imperative \cite{ref32}.
+
+Finally, to prevent data leakage and overtuning on the test set, the system applies a locked-test protocol paired with a strict cache audit procedure, guaranteeing the realistic generalization of the model.
+
+\subsection{Summary of Research Gaps}
+The core limitation of prevailing Knowledge Graph (KG) enhanced models is applying a passive KG fusion mechanism \cite{ref5}. This method blends external knowledge properties into a global feature pool via global attention operations, diluting factual deception indicators and failing to isolate the explicit conflict signal between visual patches and the graph's semantic relations. As a result, the system achieves suboptimal performance when confronting the content-knowledge inconsistency subset (Class 2: CK).
+
+To address this gap, CIKD++-RT (the no\_c\_emb variant) acts as an additive residual correction layer upon a frozen network foundation \cite{ref29}. The proposed framework employs the TVCS mechanism to guide KG relational queries to interact via local attention directly on individual visual patches, explicitly extracting the multidimensional inconsistency evidence feature $z_v$ \cite{ref33, ref34, ref35, ref36, ref37}. The model optimizes Real-vs-CK separation capability based on a rigorous locked-test protocol and post-hoc probability calibration, establishing a transparent validation basis for the realistic reliability of the downstream classification model.

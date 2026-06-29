@@ -1,0 +1,8 @@
+Python version: Unknown
+pip freeze path: D:\CIKD_STAGECD_TRANSFER\requirements_stage_cd.txt
+torch version: Unknown
+CUDA available: Unknown
+CUDA device name: Unknown
+source root: D:\CIKD
+target root: D:\CIKD_STAGECD_TRANSFER
+packaging timestamp: 2026-06-04 21:17:56

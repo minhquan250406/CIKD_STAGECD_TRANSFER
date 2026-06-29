@@ -1,0 +1,16 @@
+{
+    "config_name": "s1_cafe_lite_c_patch_enabled",
+    "d_model": 256,
+    "use_patch_pooling": true,
+    "loss": "balanced",
+    "dropout": 0.1,
+    "w_ambiguity_reg": 0.1,
+    "batch_size": 16,
+    "lr": 0.0001,
+    "weight_decay": 0.0001,
+    "epochs": 20,
+    "patience": 5,
+    "seed": 42,
+    "checkpoint_out": "checkpoints/stage_s1_cafe_lite/s1_cafe_lite_c_patch_enabled.pt",
+    "out_dir": "outputs/stage_s1_cafe_lite/s1_cafe_lite_c_patch_enabled/"
+}

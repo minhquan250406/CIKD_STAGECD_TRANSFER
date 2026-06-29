@@ -1,0 +1,48 @@
+\section{Introduction}
+
+\subsection{Background}
+In the era of rapidly advancing technology, the explosion of multimodal fake news and misinformation on social media platforms has become a serious threat to the public and social stability. Modern fake news strategies increasingly exploit the complex combination of text and images to mislead readers. To systematically address this challenge, recent academic studies have shifted focus from traditional binary fake news classification to the problem of fine-grained misinformation detection \cite{ref1, ref2}. A foundational dataset in this domain is the FineFake benchmark, which standardizes the problem into an extremely rigorous 6-way classification task. This schema categorizes digital content into six distinct dimensions: real content (Class 0), text-image inconsistency (Class 1), content-knowledge inconsistency (Class 2), text-based fake news (Class 3), image-based fake news (Class 4), and other types (Class 5) \cite{ref3}. Accurately identifying these fine-grained classification labels is a prerequisite for building targeted mitigation strategies corresponding to the core nature of each deceptive signal.
+
+\subsection{Importance of Knowledge Graph Evidence (KG Evidence)}
+Among the fine-grained classification categories, detecting Class 2 - Content-Knowledge Inconsistency (CK) poses the greatest technical challenge. Standard multimodal verification frameworks today typically optimize only for semantic alignment or similarity measurement between text and images. Although this method is effective for identifying surface deviations in Class 1 (Text-image inconsistency), they are entirely powerless against sophisticated manipulation: when both text and image are consistent with each other but jointly violate factual knowledge. For example, a fabricated news piece might use a coherent description accompanied by an unedited original image, but effectively mislinks an entity to a false historical event or geographical location. Therefore, to robustly detect the CK inconsistency subset, the system must integrate an external structured knowledge source, specifically a Knowledge Graph (KG), to act as a ground-truth reference plane for cross-modal verification \cite{ref4}.
+
+\subsection{Limitations of Passive Knowledge Graph Fusion Paradigms}
+Previous knowledge-enhanced fake news detection models often integrated KGs in the form of static contextual features or conventional modality alignment. In typical architectures like KEAN \cite{ref5} and KGAlign \cite{ref5}, entity embeddings and relational triplets are processed passively and then fused with text/image representations via concatenation, bilinear pooling, or cross-attention. We define these methods as the passive KG fusion paradigm.
+
+The core limitation of passive fusion is blending heterogeneous modalities into a common representation space but lacking an explicit supervisory objective to quantify the contradiction signal between visual content and the factual knowledge base. Because the neural network is not forced to directly score the conflict between visual patches and corresponding KG relations, the subtle indicators of factual deception are easily diluted during global fusion. Consequently, current systems achieve suboptimal performance when isolating content-knowledge inconsistency samples (Class 2: CK) from factual data.
+
+\subsection{Proposed Solution}
+To resolve this methodological bottleneck, we propose CIKD++-RT (the no\_c\_emb variant), a multimodal residual correction framework to explicitly verify and exploit the Text-Visual Contradiction Scoring (TVCS) signal. Instead of entirely replacing existing architectures, our solution acts as an additive correction layer on top of a passive neural network foundation.
+
+Specifically, the system establishes a frozen baseline model to compute initial multimodal representations from text (RoBERTa) \cite{ref6}, global image (CLIP), and entity knowledge (KG), acting as a passive Text+Image+KG anchor. On top of this anchor, a specialized TVCS model is integrated, utilizing KG relational queries ($W_q z_k$) to compute local cross-attention directly on CLIP visual patches ($V_{patch}$) \cite{ref7}. This process renders a rich, multidimensional visual evidence feature ($z_v$) to capture explicit knowledge conflicts \cite{ref8}:
+\begin{equation}
+z_v = \sum \text{softmax}(Q K^T) V
+\end{equation}
+
+The evidence feature $z_v$ is then fed into the Residual Transformer architecture \cite{ref8} to compute the correction logits (logit delta). The final inference process is formalized through a linear combination of the base logits and the residual correction part \cite{ref9}:
+\begin{equation}
+\text{logits}_{\text{final}} = \text{logits}_{\text{base}} + \alpha \cdot \text{logits}_{\text{delta}}
+\end{equation}
+
+Based on comprehensive diagnostic experiments, the final architecture completely eliminates the scalar confidence embedding vector (c\_emb) from predecessor versions. Experiments indicate that directly injecting the scalar c\_emb easily causes optimization turbulence, whereas preserving the multidimensional visual evidence feature $z_v$ yields superior generalization capability on the target task.
+
+\subsection{Terminology and Definitions}
+To ensure clarity throughout this paper, we summarize key abbreviations and notations:
+\begin{itemize}
+    \item \textbf{KG (Knowledge Graph) / CK (Content-Knowledge Inconsistency):} KG acts as external factual evidence. CK refers to the specific fake news category (Class 2) where content contradicts the KG.
+    \item \textbf{TVCS (Text-Visual Contradiction Scoring):} Our proposed module that extracts conflict signals between KG queries and visual patches.
+    \item \textbf{ECE (Expected Calibration Error):} A metric quantifying the gap between the model's confidence and its true accuracy.
+    \item \textbf{Macro-F1 / Weighted-F1 / CK-F1:} Evaluation metrics addressing class imbalance. Macro-F1 averages class F1s equally, Weighted-F1 accounts for class size, and CK-F1 is the specific F1 for the crucial CK class.
+    \item \textbf{no\_c\_emb}: The final model variant that excludes scalar confidence embedding to reduce optimization noise.
+    \item \textbf{$\mathbf{z_v}$}: The rich multidimensional visual evidence feature output by TVCS.
+    \item \textbf{$\mathbf{logits_{base}}$ / $\mathbf{logits_{delta}}$ / $\mathbf{logits_{final}}$}: The raw predictions from the passive anchor model, the residual correction term, and the final combined output, respectively.
+\end{itemize}
+
+\subsection{Contributions}
+The core technical and empirical contributions of this research include:
+\begin{itemize}
+    \item \textbf{Explicit TVCS Mechanism:} Proposing the Text-Visual Contradiction Scoring (TVCS) mechanism, using structural knowledge relations to guide attention toward visual patches, directly extracting targeted contradiction evidence.
+    \item \textbf{no\_c\_emb Residual Architecture:} Introducing an additive residual correction structure to refine the passive multimodal anchor. Experiments prove that preserving the rich multidimensional visual evidence feature $z_v$ eliminates optimization noise from injecting the scalar confidence (c\_emb) of previous systems.
+    \item \textbf{Rigorous Locked Test Protocol:} Applying an evaluation procedure on a locked test split combined with a cache audit on the kg\_complete data split of FineFake. The protocol applies secure benchmark design standards to ensure absolute zero data leakage and completely eliminates test-tuning phenomena.
+    \item \textbf{Extensive Empirical Validation:} The final F4 model achieves 58.3140\% Accuracy, 46.9755\% Macro-F1, and a specialized CK-F1 score of 37.5546\% for the knowledge inconsistency class on the locked test set. The use of Macro and CK-F1 metrics strictly adheres to evaluation principles on class imbalance distributions. The TVCS module achieves a Real-vs-CK separation AUC = 0.726705. Finally, the post-hoc temperature scaling method \cite{ref10} optimizes confidence and system risk analysis, reducing Expected Calibration Error (ECE) from 14.80\% to 3.85\% without altering the argmax classification boundaries.
+\end{itemize}

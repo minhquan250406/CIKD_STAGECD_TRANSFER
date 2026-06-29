@@ -1,0 +1,44 @@
+stage: F
+model_name: cikd_pp_rt
+seed: 42
+
+paths:
+  kg_complete_cache: data/cache/kg_complete
+  tvcs_eligible_cache: data/cache/tvcs_eligible
+  baseline_checkpoint: checkpoints/baselines/text_image_kg_concat_seed42.pt
+  baseline_logits_dir: outputs/stage_f0_baseline_anchor
+  tvcs_checkpoint: checkpoints/stage_f/tvcs_specialist_seed42.pt
+  stage_f_checkpoint_dir: checkpoints/stage_f
+
+model:
+  num_classes: 6
+  text_dim: 768
+  image_global_dim: 512
+  image_patch_dim: 512
+  num_patches: 49
+  kg_dim: 100
+  relation_emb_dim: 64
+  c_emb_dim: 64
+  d_model: 256
+  num_layers: 2
+  num_heads: 4
+  dropout: 0.2
+  alpha_init: 0.2
+  alpha_max: 0.5
+
+training:
+  batch_size: 128
+  epochs: 20
+  lr: 0.0001
+  weight_decay: 0.0001
+  patience: 5
+  lambda_tvcs: 0.5
+  focal_gamma: 1.0
+  residual_mu: 0.01
+  selection_score: "0.45*macro_f1 + 0.35*ck_f1 + 0.20*tvcs_auc"
+
+guardrails:
+  no_test_selection: true
+  require_execute_train_flag: true
+  require_execute_final_flag: true
+  no_overwrite_stage_e: true

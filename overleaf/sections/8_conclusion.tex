@@ -1,0 +1,14 @@
+\section{Conclusion and Limitations}
+
+The fine-grained multimodal misinformation detection task requires combining text, image, and knowledge graph (KG) to resolve content-knowledge inconsistency. We propose CIKD++-RT no\_c\_emb, which applies a residual Transformer correction mechanism based on the visual evidence $z_v$ from the TVCS module. On the locked test split, the F4 version successfully improves Accuracy, Macro-F1, Weighted-F1, and CK-F1 metrics compared to the passive baseline. The TVCS module achieves a separation capability with AUC = 0.726705, and the calibration process helps reduce the H1-Cal Test ECE metric to 3.85\%.
+
+The system is rigorously designed for the purpose of knowledge-grounded inconsistency detection, with absolutely no truth understanding capability or official SOTA claims. Although yielding positive but modest gains in the Macro-F1 metric, the model still faces persistent challenges regarding the recall of the CK class as well as performance on minority classification groups.
+
+While the CIKD++-RT system demonstrates distinct improvements across specific metrics, we must acknowledge the following critical limitations:
+
+\begin{enumerate}
+    \item \textbf{CK Recall Drop:} The improvements in the content-knowledge inconsistency (CK) classification are entirely driven by precision. Consequently, the model's ability to recall all relevant CK instances has degraded, with the CK recall dropping slightly from 38.56\% to 36.44\%.
+    \item \textbf{Difficulty with Class 5:} The model continues to face significant difficulties with the minority "Other" classification (Class 5), highlighting a weakness in handling highly imbalanced or sparsely appearing types of multimodal fake news.
+    \item \textbf{No Direct SOTA Comparison:} Our current evaluation focuses solely on the internal context, demonstrating improvement over the passive Text+Image+KG anchor baseline. This research has not reproduced and directly compared with official SOTA models (e.g., KGAlign, KAMP) on the same dataset split and evaluation protocol. Therefore, we do not claim to achieve absolute SOTA performance on the FineFake dataset.
+    \item \textbf{Inconsistency Detection vs. Fact-Checking:} The system - including the demo version - is strictly an inconsistency detection tool. It identifies conflicts between the provided text, image, and knowledge graph features. It is not an absolute fact-checking machine and has no intrinsic truth understanding beyond the provided context.
+\end{enumerate}

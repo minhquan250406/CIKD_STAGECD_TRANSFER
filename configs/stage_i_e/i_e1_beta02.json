@@ -1,0 +1,37 @@
+{
+    "config_name": "i_e1_beta02",
+    "beta": 0.2,
+    "class_mask": [
+        0.1,
+        1.0,
+        1.0,
+        0.5,
+        0.5,
+        1.0
+    ],
+    "bottleneck_classes": [
+        1,
+        2,
+        5
+    ],
+    "class_mask_path": "D:\\CIKD_STAGECD_TRANSFER\\outputs\\stage_i_macro_micro_improvement\\stage_i_e\\e0_bottleneck_audit\\E0_RECOMMENDED_CLASS_MASK.json",
+    "w_balanced": 1.0,
+    "w_focal": 0.3,
+    "w_ck_guard": 0.1,
+    "w_kl": 0.08,
+    "w_reg": 0.02,
+    "tau_logit_adjust": 0.5,
+    "focal_gamma": 1.5,
+    "kl_temperature": 1.0,
+    "hidden_dim": 128,
+    "dropout": 0.1,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "epochs": 10,
+    "patience": 3,
+    "batch_size": 16,
+    "tvcs_checkpoint": "checkpoints/stage_f/tvcs_specialist_seed42_padded_for_f2.pt",
+    "f4_checkpoint": "outputs/stage_f3_ablation/no_c_emb/cikd_pp_rt_ablation_no_c_emb.pt",
+    "checkpoint_out": "checkpoints/stage_i_e/i_e1_beta02.pt",
+    "out_dir": "outputs/stage_i_macro_micro_improvement/stage_i_e/i_e1_beta02/"
+}

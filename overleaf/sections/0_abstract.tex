@@ -1,0 +1,7 @@
+\begin{abstract}
+We investigate the problem of fine-grained multimodal misinformation detection, in which evidence from text, images, and knowledge graphs (KG) must be analyzed jointly. Current KG-enhanced systems often utilize the KG merely as a passive context, whereas content-knowledge inconsistency requires an explicit contradiction signal. We propose CIKD++-RT, a residual TVCS-Transformer architecture that employs KG-guided visual patch evidence to refine the passive Text+Image+KG anchor. On the locked test split of FineFake kg\_complete, the final variant no\_c\_emb improved Accuracy, Macro-F1, Weighted-F1, and CK-F1 metrics compared to the passive model, while achieving AUC = 0.726705 in the TVCS Real vs. CK task. The post-hoc temperature scaling method helps reduce Expected Calibration Error (ECE) without altering the model's predictions. We position this result as a capability for knowledge-grounded inconsistency detection, rather than aiming for truth understanding or achieving SOTA across the entire task.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Fake News Detection, Knowledge Graph, Multimodal Inconsistency, Residual Transformer.
+\end{IEEEkeywords}

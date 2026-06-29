@@ -1,0 +1,147 @@
+\section{Experimental Setup, Evaluation Metrics, and Validation Protocol}
+
+\subsection{Class Imbalance Handling Strategy}
+Because FineFake is naturally imbalanced, properly handling class distribution is critical to system reliability. We deliberately \textbf{did not use} data-level balancing techniques such as oversampling, undersampling, SMOTE, or fake sample generation. Enforcing forced equal class balancing distorts the natural distribution of real-world misinformation and risks overfitting on very small classes (such as Label 5: ``Other'', which accounts for only 1.77\% of the data).
+
+Instead, our handling strategy strictly follows a protocol-first approach:
+\begin{enumerate}
+    \item \textbf{Dataset/Protocol-level handling:} We strictly utilized stratified splitting based on fine-grained labels to ensure the minority classes (especially CK and Other) are proportionally represented across Train, Validation, and Test splits. We manually checked the CK ratio to ensure sufficient sample sizes in the evaluation sets.
+    \item \textbf{Evaluation-level handling:} Rather than relying solely on overall Accuracy (which heavily favors dominant classes), we explicitly evaluate using Macro-F1, Weighted-F1, per-class F1 (e.g., CK-F1), and confusion matrices to transparently observe the model's true performance on minority categories.
+    \item \textbf{Model-level handling:} Model-level interventions (such as focal loss weighting or validation-based selection criteria targeting CK-F1) are applied only \textit{after} the rigorous stratified data protocol is fixed, ensuring no leakage or synthetic distribution bias.
+\end{enumerate}
+
+\subsection{Baselines and Diagnostic Models}
+To comprehensively evaluate the effectiveness of the proposed CIKD++-RT architecture, we compare against a final set of baselines and diverse diagnostic models. Unimodal baselines include a \textbf{Text-only} model (RoBERTa) and an \textbf{Image-only} model (CLIP), acting as basic sanity checks. The fundamental multimodal baseline is \textbf{T+I concat}, which fuses text and image without external knowledge.
+
+For knowledge-enhanced baselines, we evaluate \textbf{T+I+KG concat}, acting as the primary passive KG anchor. We also compare against stronger fusion architectures: \textbf{G0-E Transformer} (a highly stable Transformer-based passive fusion architecture) and \textbf{G1-B Co-attention} (a generalized multimodal cross-attention baseline). Finally, we include the \textbf{Old CIKD} (CKBoost-MoE) framework to demonstrate the evolutionary improvements of the current version.
+
+Additionally, several models are strictly utilized for internal diagnostic and feasibility check purposes, including \textbf{CAFE-lite}, \textbf{Stage I}, and previous ablation variants. These models are strictly treated as diagnostic references, not final comparative baselines.
+
+\subsection{Evaluation Metrics}
+We evaluate all models using four complementary classification metrics, suitable for the imbalanced 6-way classification context of FineFake.
+
+\subsubsection{Accuracy}
+Accuracy measures the proportion of correctly classified samples over the total test set:
+\begin{equation}
+\text{Accuracy} = \frac{1}{N} \sum_{i=1}^N \mathbf{1}[\hat{y}_i = y_i]
+\end{equation}
+where $y_i$ is the ground truth label and $\hat{y}_i$ is the predicted label for sample $i$. Although Accuracy provides a simple overall performance measure, it can be misleading under severe class imbalance conditions. A model that ignores minority classes (e.g., Label 5: Other, accounting for only 1.77\% of samples) can still achieve high accuracy by performing well on the dominant class. Therefore, we report Accuracy alongside the additional metrics below.
+
+\subsubsection{Macro-F1}
+Macro-F1 computes the F1 score for each class independently, then takes the unweighted average, regardless of class frequency:
+\begin{equation}
+\text{Macro-F1} = \frac{1}{C} \sum_{c=0}^{C-1} F1^c, \quad \text{where} \quad F1^c = \frac{2 \cdot P^c \cdot R^c}{P^c + R^c}
+\end{equation}
+with C = 6 classes, $P^c$ and $R^c$ denoting per-class Precision and Recall.
+
+In imbalanced datasets like FineFake kg\_complete (where Label 0 constitutes 49.2\% of the training set and Label 5 only 2.1\%), Macro-F1 penalizes models that exclusively perform well on majority classes. By treating all six categories equally, this metric ensures that improvements on challenging minority classes (especially Label 2: CK and Label 5: Other) are recognized. This makes Macro-F1 the most informative aggregate metric to assess whether CIKD++-RT genuinely enhances fine-grained discrimination or merely improves majority class accuracy \cite{ref40}.
+
+\subsubsection{Weighted-F1}
+Weighted-F1 calculates the F1 score for each class but weights each class's contribution by the number of ground truth samples in the test set:
+\begin{equation}
+\text{Weighted-F1} = \frac{\sum_{c=0}^{C-1} n^c \cdot F1^c}{\sum_{c=0}^{C-1} n^c}
+\end{equation}
+where $n^c$ is the number of ground truth samples for class $c$ in the test set. Weighted-F1 reflects overall performance weighted by the actual label distribution, and is reported alongside Macro-F1 to provide a complementary perspective: if Weighted-F1 is significantly higher than Macro-F1, it indicates the model primarily benefits from majority class performance rather than uniform improvement across all classes.
+
+\subsubsection{CK-F1 (Label 2 F1 Score)}
+CK-F1 is the F1 score computed specifically for Label 2 (Content-Knowledge Inconsistency):
+\begin{equation}
+\text{CK-F1} = F1^{c=2} = \frac{2 \cdot P_{\text{CK}} \cdot R_{\text{CK}}}{P_{\text{CK}} + R_{\text{CK}}}
+\end{equation}
+CK is the target class of the knowledge-guided contradiction detection mechanism in CIKD++-RT. Improving CK-F1 is the primary technical objective of the system. We report CK-F1 separately to make the model's contribution to this specific detection task transparent and verifiable.
+
+In the locked test evaluation, the CK-F1 improvement over the passive T+I+KG baseline is primarily driven by an \textbf{improvement in precision} (31.93\% $\rightarrow$ 38.74\%) and a \textbf{reduction in false positives} (194 $\rightarrow$ 136), while CK recall slightly decreases (38.56\% $\rightarrow$ 36.44\%). We report this trade-off honestly, reflecting the model's mechanism of reducing false CK predictions rather than increasing coverage.
+
+\subsubsection{TVCS AUC}
+To evaluate the explicit contradiction scoring sub-problem, we measure the \textbf{TVCS AUC} for the capability to separate Real and CK samples. This metric assesses the TVCS expert module's ability to generate continuous contradiction scores that distinguish genuine alignment (Real, Label 0) and content-knowledge inconsistency (CK, Label 2), independent of the final classifier.
+
+\subsection{Calibration Metric: Expected Calibration Error (ECE)}
+Beyond classification metrics, we evaluate the quality of the model's confidence calibration using the Expected Calibration Error (ECE) \cite{ref10}:
+\begin{equation}
+\text{ECE} = \sum_{m=1}^M \frac{|B_m|}{N} |\text{acc}(B_m) - \text{conf}(B_m)|
+\end{equation}
+where samples are grouped into M = 10 equally spaced confidence bins $B_m$, and $\text{acc}(B_m)$, $\text{conf}(B_m)$ are the average accuracy and average predicted confidence in each bin, respectively.
+
+A well-calibrated model will have an ECE near 0\%, meaning softmax confidence scores faithfully reflect empirical accuracy. ECE is particularly critical in our context because the 6-way class imbalance can cause the model to generate overconfident predictions for the dominant class. We report ECE before and after calibration using the temperature scaling method described in Section 5.4.
+
+\subsection{Calibration Protocol: Temperature Scaling}
+We apply Temperature Scaling \cite{ref10} as a post-hoc calibration method. Temperature scaling introduces a single scalar parameter T > 0 to rescale the logits before conversion to probabilities via softmax:
+\begin{equation}
+\hat{p}^c = \frac{\exp(z^c/T)}{\sum_{c'=0}^5 \exp(z^{c'}/T)}
+\end{equation}
+where $z^c$ is the raw logit for class c, and T is optimized by minimizing the Negative Log-Likelihood (NLL) on the \textbf{validation set}.
+
+\textbf{Key properties of temperature scaling:}
+\begin{itemize}
+    \item When T > 1: the distribution is "softened" - confidence decreases, predictions become less certain. This is suitable when the model is overconfident.
+    \item When T < 1: predictions are sharpened.
+    \item Temperature scaling \textbf{does not alter the argmax} of the output distribution. The predicted class label remains identical before and after calibration; only the confidence score changes.
+\end{itemize}
+
+\begin{table}[!htbp]
+\centering
+\caption{Calibration results (H1-Cal canonical)}
+\begin{tabularx}{\linewidth}{|X|c|c|c|}
+\hline
+\textbf{Dataset} & \textbf{Raw ECE} & \textbf{Calibrated ECE} & \textbf{Temperature T} \\
+\hline
+Validation & 14.876\% & 4.501\% & 1.522523 \\
+\hline
+Test & 14.80\% & 3.85\% & 1.522523 \\
+\hline
+\end{tabularx}
+\end{table}
+
+The optimal temperature T = 1.522523 is determined by minimizing NLL on the validation set. Applying this fixed T to the locked test set reduces ECE from \textbf{14.80\% to 3.85\%} with \textbf{no argmax changes} - confirming that all classification performance metrics (Accuracy, F1) are entirely unaffected by calibration. All calibrated confidence scores reported in this paper utilize this canonical H1-Cal temperature.
+
+Throughout the paper, all classification metrics (Accuracy, Macro-F1, Weighted-F1, CK-F1) are calculated from raw argmax predictions and are unaffected by temperature scaling. Calibration exclusively impacts the reported confidence/probability values and ECE. The distinction between Raw ECE (14.80\%) and Calibrated ECE (3.85\%) is consistently maintained throughout.
+
+\subsection{Validation-Only Model Selection Protocol}
+All model checkpoints are selected based on a selection score computed \textbf{solely on the validation set}:
+\begin{equation}
+\text{Selection Score} = 0.5 \times \text{Macro-F1}_{val} + 0.5 \times \text{CK-F1}_{val}
+\end{equation}
+This composite score equally balances overall multi-class performance (Macro-F1) and target CK class performance (CK-F1), reflecting the dual objective of the system. The checkpoint achieving the highest selection score on the validation set is used as the final model for test set evaluation.
+
+\textbf{Rationale for validation-based selection:} Using test set performance to guide model selection would constitute test data leakage and invalidate the reported results. The validation selection protocol ensures the test set operates exclusively as a held-out split, providing an unbiased estimate of generalization performance.
+
+\subsection{No Test Tuning Guarantee Protocol}
+We enforce a strict no-test-tuning guarantee across all experiments:
+\begin{enumerate}
+    \item \textbf{Hyperparameter Tuning:} All hyperparameters - including learning rate ($1 \times 10^{-4}$), weight decay ($1 \times 10^{-4}$), dropout rate (0.2), TVCS loss weight ($\lambda\_TVCS = 0.5$), residual normalization ($\mu = 0.01$), residual limit ($\alpha\_max = 0.5$), Transformer depth (L = 2 layers, H = 4 heads, d\_model = 256), and focal loss $\gamma = 1.0$ - are fixed based on validation performance. No hyperparameters were adjusted following any observation of test set results.
+    \item \textbf{Early Stopping:} Training utilizes patience-based early stopping with patience = 5 epochs, triggered by the validation selection score. The test split is never loaded or accessed during training.
+    \item \textbf{Temperature Calibration:} The temperature scalar T = 1.522523 is optimized on the validation set NLL. This value is subsequently applied to the test set without any further adjustments.
+    \item \textbf{Locked Test Set Access:} In the codebase, the test split (split\_id = 2) is loaded and evaluated exclusively in the F4 Stage (stage\_f4\_final\_lock.py), which is executed once and guarded by an explicit --execute\_final flag. All other stages operate exclusively on the train (split\_id = 0) and validation (split\_id = 1) splits.
+    \item \textbf{Seed Reproducibility:} All experiments employ seed = 42 for Python, NumPy, and PyTorch random number generators, ensuring complete reproducibility of the results.
+\end{enumerate}
+
+\subsection{Bootstrap Confidence Intervals}
+To assess the statistical reliability of metric improvements over the baseline, we report \textbf{paired bootstrap confidence intervals} \cite{ref41} with 1,000 resamples (seed = 42). For each metric m and each bootstrap resample b:
+\begin{equation}
+\Delta_b(m) = m(\text{CIKD++-RT, resample}_b) - m(\text{Baseline, resample}_b)
+\end{equation}
+The 95\% confidence interval is calculated as the 2.5th and 97.5th percentiles of $\{\Delta_b(m)\}_{b=1}^{1000}$. We also report the probability of improvement $P(\Delta > 0)$ as the proportion of resamples where the model outperforms the baseline.
+
+\begin{table*}[!t]
+\centering
+\caption{Bootstrap results versus passive T+I+KG baseline (locked test set, N = 2,586)}
+\begin{tabularx}{\textwidth}{|X|c|c|c|c|}
+\hline
+\textbf{Metric} & \textbf{Baseline} & \textbf{F4 CIKD++} & \textbf{95\% Confidence Interval} & \textbf{P(improvement)} \\
+\hline
+Accuracy & 56.69\% & 58.31\% & [+0.31\%, +2.98\%] & 98.6\% \\
+\hline
+Macro-F1 & 0.4672 & 0.4698 & [-0.0142, +0.0192] & 63.0\% \\
+\hline
+CK-F1 & 0.3493 & 0.3755 & [-0.0197, +0.0714] & 88.0\% \\
+\hline
+\end{tabularx}
+\end{table*}
+
+\textbf{Interpretation of results:}
+\begin{itemize}
+    \item The improvement in Accuracy is well-supported statistically (98.6\% probability).
+    \item The Macro-F1 improvement is modest and positive (63.0\% probability), but the 95\% confidence interval crosses zero, indicating the improvement is not statistically conclusive.
+    \item CK-F1 demonstrates a meaningful directional improvement (88.0\% probability) aligning with the targeted TVCS mechanism, but the confidence interval also includes zero.
+\end{itemize}
+We do not claim these improvements as statistically conclusive. The bootstrap results are reported to transparentize the magnitude and uncertainty of the observed improvements.

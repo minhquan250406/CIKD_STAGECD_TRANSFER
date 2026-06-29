@@ -1,0 +1,202 @@
+\section{Dataset, Protocol, and Feature Cache}
+
+\subsection{Dataset Description}
+We conduct experiments on FineFake \cite{ref38}, a public benchmark for fine-grained multimodal misinformation detection. FineFake is designed to move beyond binary fake/real classification by providing rich, structured annotations to distinguish various types of misinformation at a fine-grained level. Each sample in FineFake includes a text claim, an associated image, and a knowledge graph (KG) entity embedding retrieved from relevant entities in an external knowledge base.
+
+\subsubsection{Fine-Grained Label Taxonomy}
+FineFake applies a 6-way classification schema, where each sample is assigned one of the following labels:
+
+\begin{table*}[!t]
+\centering
+\caption{Fine-grained label taxonomy of the FineFake dataset}
+\begin{tabularx}{\textwidth}{|c|X|X|}
+\hline
+\textbf{Label ID} & \textbf{Category Name} & \textbf{Description} \\
+\hline
+0 & Real & Content is consistent and shows no signs of misinformation. \\
+\hline
+1 & Text-Image Inconsistency & There is a mismatch or contradiction between the text claim and the accompanying image. \\
+\hline
+2 & Content-Knowledge Inconsistency (CK) & Content contradicts verifiable information from an external knowledge graph - the primary target category of our system. \\
+\hline
+3 & Text-based Fake & Misinformation is primarily carried by the text claim. \\
+\hline
+4 & Image-based Fake & Misinformation is primarily fabricated or manipulated in the image. \\
+\hline
+5 & Other & Misinformation cases that do not clearly fit into the above categories. \\
+\hline
+\end{tabularx}
+\end{table*}
+
+This taxonomy captures a broader spectrum of misinformation compared to binary settings, specifically isolating \textbf{Content-Knowledge Inconsistency (CK, Label 2)} as a distinct category - the exact type of misinformation CIKD++-RT is explicitly designed to detect through knowledge-guided visual contradiction evaluation.
+
+\subsubsection{Data Sources and Topics}
+The complete FineFake dataset contains \textbf{16,909 samples} collected from seven online platforms: Snopes (44.69\%), Reddit (23.94\%), CNN (13.66\%), The Washington Post (6.16\%), Twitter (5.63\%), AP News (4.34\%), and CDC.gov (1.59\%). The samples cover six topic domains: Politics (33.87\%), Society (23.30\%), Entertainment (21.88\%), Conflict (10.16\%), Business (5.93\%), and Health (4.20\%), with a small fraction (0.67\%) remaining uncategorized.
+
+\subsection{Dataset Statistics and Class Distribution}
+Table 2 summarizes the class distribution across the full dataset and its subsets (described in Section 3.3). Out of 16,909 total samples, \textbf{Real (Label 0)} is the largest class (44.37\%), followed by \textbf{Text-based Fake (Label 3)} with 20.37\%. \textbf{Content-Knowledge Inconsistency (CK, Label 2)} accounts for 9.53\% of the total dataset (1,612 samples), while \textbf{Other (Label 5)} is the most underrepresented class with only 1.77\% (300 samples). This significant \textbf{class imbalance} is a major challenge addressed through our validation-based model selection and calibration procedures (see Section 5).
+
+\begin{table*}[!t]
+\centering
+\caption{Class distribution across the raw full FineFake dataset (N = 16,909)}
+\begin{tabularx}{\textwidth}{|c|X|c|c|}
+\hline
+\textbf{Label ID} & \textbf{Category} & \textbf{Total Count} & \textbf{\% of Total} \\
+\hline
+0 & Real & 7,502 & 44.37\% \\
+\hline
+1 & Text-Image Inconsistency & 1,477 & 8.74\% \\
+\hline
+2 & Content-Knowledge Inconsistency (CK) & 1,612 & 9.53\% \\
+\hline
+3 & Text-based Fake & 3,444 & 20.37\% \\
+\hline
+4 & Image-based Fake & 2,574 & 15.22\% \\
+\hline
+5 & Other & 300 & 1.77\% \\
+\hline
+— & Total & 16,909 & 100\% \\
+\hline
+\end{tabularx}
+\end{table*}
+
+\subsection{Data Preprocessing Pipeline and Protocol Stratification}
+
+To ensure robust model training and avoid data leakage, we implement a strict sequential preprocessing pipeline: \textbf{Raw FineFake $\rightarrow$ data audit $\rightarrow$ KG missingness check $\rightarrow$ KG-complete protocol $\rightarrow$ TVCS-eligible protocol $\rightarrow$ feature cache $\rightarrow$ NaN/Inf/alignment checks}.
+
+\subsubsection{Data Audit and KG Missingness}
+A critical characteristic of the FineFake dataset is \textbf{the incomplete coverage of knowledge graph embeddings}. The raw FineFake dataset contains exactly 16,909 samples. Our initial data audit confirms that image existence is 100\%, missing text is 0\%, and missing image path is 0\%. However, the audit reveals that \textbf{4,041 samples (23.8985\%)} have missing or zeroed knowledge embeddings. The KG missingness rate is highly skewed across label categories: Label 4 (Image-based Fake) suffers the highest missing rate at 50.78\%, while Label 5 (Other) has the lowest at 8.67\%. For the CK class (Label 2), the missing rate is 24.69\%.
+
+\textbf{Note:} Because our proposed TVCS mechanism strictly requires complete knowledge graph embeddings and valid relations to function, we establish a final strict \textbf{kg\_complete protocol} containing exactly \textbf{12,786 samples retained}. Consequently, \textbf{4,123 samples are excluded} from the final KG-grounded protocol (primarily due to the 4,041 missing KG embeddings, alongside a small number lacking valid relations or entity IDs). These excluded samples are not deleted from the original dataset; they are retained in the full manifest and cache for audit and future work. All analyses, final model training, and F4 evaluation are conducted strictly on the \textbf{kg\_complete} subset.
+
+\begin{table}[!htbp]
+\centering
+\caption{Statistics of the kg\_complete subset}
+\begin{tabularx}{\linewidth}{|X|c|c|}
+\hline
+\textbf{Split} & \textbf{Count} & \textbf{\% of kg\_complete} \\
+\hline
+Train & 8,900 & 69.61\% \\
+\hline
+Validation & 1,300 & 10.17\% \\
+\hline
+Test & 2,586 & 20.22\% \\
+\hline
+Total (kg\_complete) & 12,786 & — \\
+\hline
+\end{tabularx}
+\end{table}
+
+The train/val/test splits were generated using stratified sampling (stratified by fine-grained labels), with a fixed random seed (seed=42) and a 70/10/20 ratio on the full dataset prior to KG filtering. In the kg\_complete validation set, there are \textbf{120 CK samples}, and in the test set, there are \textbf{236 CK samples} - both exceeding the minimum threshold of 30 samples required for reliable CK class evaluation.
+
+\textbf{Critical Distinction:} When referring to dataset statistics in this paper, we explicitly distinguish between the raw full dataset (N = 16,909) and the kg\_complete subset (N = 12,786). All reported model performance metrics are evaluated exclusively on the kg\_complete test split. Table \ref{tab:kg_complete_dist} details the exact post-filter class distribution for this subset.
+
+\begin{table*}[!t]
+\centering
+\caption{Class distribution after KG filtering (kg\_complete subset, N = 12,786)}
+\label{tab:kg_complete_dist}
+\begin{tabularx}{\textwidth}{|c|X|c|c|}
+\hline
+\textbf{Label ID} & \textbf{Category} & \textbf{Count} & \textbf{\% of kg\_complete} \\
+\hline
+0 & Real & 6,298 & 49.26\% \\
+\hline
+1 & Text-Image Inconsistency & 924 & 7.23\% \\
+\hline
+2 & Content-Knowledge Inconsistency (CK) & 1,211 & 9.47\% \\
+\hline
+3 & Text-based Fake & 2,848 & 22.27\% \\
+\hline
+4 & Image-based Fake & 1,240 & 9.70\% \\
+\hline
+5 & Other & 265 & 2.07\% \\
+\hline
+— & Total & 12,786 & 100\% \\
+\hline
+\end{tabularx}
+\end{table*}
+
+\subsubsection{TVCS Eligible Subset}
+Another subset, \textbf{tvcs\_eligible}, is used exclusively for training the TVCS expert module (Section 4). This subset includes all kg\_complete samples with fine-grained labels of either \textbf{Real (Label 0)} or \textbf{Content-Knowledge Inconsistency (Label 2)} - the two classes defining the binary discrimination task for TVCS. The TVCS expert is trained to generate a contradiction score differentiating Real samples from CK samples.
+
+\begin{table}[!htbp]
+\centering
+\caption{Statistics of the tvcs\_eligible subset}
+\begin{tabularx}{\linewidth}{|X|c|c|c|}
+\hline
+\textbf{Split} & \textbf{Count} & \textbf{CK Samples} & \textbf{Real Samples} \\
+\hline
+Train & 5,241 & 855 & 4,386 \\
+\hline
+Validation & 762 & 120 & 642 \\
+\hline
+Test & 1,506 & 236 & 1,270 \\
+\hline
+Total & 7,509 & 1,211 & 6,298 \\
+\hline
+\end{tabularx}
+\end{table}
+
+Note that the tvcs\_eligible subset is a strict subset of kg\_complete, and the TVCS expert is never exposed to the locked test split during training (validation-only model selection protocol, detailed in Section 5).
+
+\subsection{Feature Cache}
+To enable efficient training across multiple model configurations and ablations without repeated inference through large pre-trained encoders, we first extract and cache all input features as NumPy arrays. The feature extraction pipeline processes the full dataset once and generates three cache directories: \textbf{full}, \textbf{kg\_complete}, and \textbf{tvcs\_eligible}, each containing aligned feature arrays for all samples in that subset.
+
+The following features are extracted and cached for each sample:
+
+\begin{table*}[!t]
+\centering
+\caption{Extracted and cached features (kg\_complete subset, N = 12,786)}
+\begin{tabularx}{\textwidth}{|X|X|c|X|}
+\hline
+\textbf{Feature} & \textbf{Backbone Model} & \textbf{Shape} & \textbf{Description} \\
+\hline
+text\_features & RoBERTa-base \cite{ref6} & [N, 768] & CLS token embedding representing the entire text claim \\
+\hline
+image\_features\_global & CLIP ViT-B/32 \cite{ref39} & [N, 512] & Global image embedding after CLIP image projection \\
+\hline
+image\_features\_patch & CLIP ViT-B/32 & [N, 49, 512] & Image embedding per patch (49 patches, CLS excluded) \\
+\hline
+kg\_features & FineFake KG Entity Embeddings & [N, 100] & Knowledge graph embedding with 100 dimensions \\
+\hline
+relation\_ids & FineFake Relation Field & [N] & Integer ID mapping the first relation type to a vocabulary of 1,029 relation types \\
+\hline
+\end{tabularx}
+\end{table*}
+
+All cached arrays underwent rigorous quality checks. No NaN or Inf values were detected in any feature arrays across all caches. The patch features were verified to have non-zero variance and differ from the global image features, confirming that spatial information is preserved. The relation vocabulary contains 1,029 unique relation types, with token 0 reserved for \textless pad\textgreater (samples without relations) and token 1 for \textless unk\textgreater.
+
+The full feature cache for the kg\_complete subset corresponding to N = 12,786 samples has the following shapes:
+
+\begin{table}[!htbp]
+\centering
+\caption{Feature cache shapes for the kg\_complete subset (N = 12,786)}
+\begin{tabularx}{\linewidth}{|X|c|}
+\hline
+\textbf{Feature} & \textbf{Shape (kg\_complete)} \\
+\hline
+text\_features & [12786, 768] \\
+\hline
+image\_features\_global & [12786, 512] \\
+\hline
+image\_features\_patch & [12786, 49, 512] \\
+\hline
+kg\_features & [12786, 100] \\
+\hline
+relation\_ids & [12786] \\
+\hline
+\end{tabularx}
+\end{table}
+
+All feature arrays are aligned via a common \textbf{sample\_ids} index and a \textbf{split\_ids} array, ensuring that train (split\_id=0), val (split\_id=1), and test (split\_id=2) splits can be accurately reconstructed from any cache without ambiguity.
+
+\subsection{Evaluation Protocol Safeguards}
+The following protocol safeguards are enforced in all experiments to ensure the integrity of our evaluation:
+
+\begin{enumerate}
+    \item \textbf{Locked test split.} The test split is used exclusively for final evaluation reported in this paper (Section 6). During any phase of model development, architecture search, or hyperparameter tuning, the test split is unaccessed. This is strictly enforced in code via the split\_id filter: the final evaluation phase (F4 Stage) loads test samples only after model training and selection are complete.
+    \item \textbf{Validation-only model selection.} All model checkpoints are selected based on their performance on the validation split, using a selection score defined as a weighted combination of validation Macro-F1 and CK-F1. The final model used for test set evaluation is exclusively the checkpoint that achieved the best validation selection score.
+    \item \textbf{No duplicate samples.} The dataset contains no duplicate sample IDs or duplicate image paths across splits. Each sample appears in exactly one of the train, validation, or test splits.
+    \item \textbf{No test tuning guarantee.} No hyperparameters - including learning rates, dropout, regularization weights, or loss function parameters - were tuned using feedback from the test set. All hyperparameter decisions were made on the validation split.
+    \item \textbf{Sanity check.} A KG+Relation sanity check model trained solely on KG and relation features achieved a validation Macro-F1 of \textbf{0.1713}, serving as a diagnostic sanity check confirming that the features alone (without architectural contributions) do not trivially solve the task.
+\end{enumerate}

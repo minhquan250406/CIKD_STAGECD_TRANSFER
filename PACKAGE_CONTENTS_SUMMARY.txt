@@ -1,0 +1,37 @@
+CIKD PORTABLE STAGECD PACKAGE SUMMARY
+=====================================
+Timestamp: 2026-06-04 21:18:15
+Source Root: D:\CIKD
+Target Root: D:\CIKD_STAGECD_TRANSFER
+
+Package Sizes:
+- Total Package Size: 20.264 GB
+- data\raw\FineFake size: 4.930 GB
+- data\cache size: 3.670 GB
+- data\external size: 10.645 GB
+- data\processed size: 1.019 GB
+- outputs size: < 0.001 GB
+- src size: < 0.001 GB
+
+File Details:
+- FineFake Image Count: 40,643 files (Matches expected ~40,643)
+- full cache N: expected 16,909, actual 16,909
+- kg_complete cache N: expected 12,786, actual 12,786
+- tvcs_eligible cache N: expected 7,509, actual 7,509
+
+Audit & Pipeline Statuses:
+- Stage A Data Audit: Passed (00_stage_a_summary.txt)
+- Stage A KG Patch Audit: Passed (00_stage_a_kg_patch_summary.txt)
+- Stage B Feature Caching: Passed (01_cache_summary.txt)
+- Stage B Smoke Audit: Passed (01_stage_b_smoke_audit_summary.txt)
+- Package Verification (VERIFY_PACKAGE.ps1): Passed (PACKAGE_READY_FOR_STAGE_C_D = TRUE)
+- Package Shape Verification (verify_stagecd_package.py): Passed (VERIFY_STAGECD_PACKAGE_PASS = TRUE)
+
+Next Recommended Training Commands:
+- Stage C Baselines:
+  .venv\Scripts\python.exe src\run_stage_cd.py --stage C
+- Stage D CIKD:
+  .venv\Scripts\python.exe src\run_stage_cd.py --stage D --model cikd_light --lambda_tvcs 0.3 --seed 42
+
+Final Handoff Certification Statement:
+This package contains all necessary processed data, cached features, manifests, scripts, and audit evidence required to continue CIKD Stage C and Stage D training on another machine. Raw FineFake data is also included for re-cache/case-study safety. No additional downloads are required for Stage C/D.
